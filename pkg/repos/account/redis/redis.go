@@ -30,7 +30,7 @@ func New(config RedisConfig) account.Storer {
 	}
 }
 
-func (r *redisClint) CreateAccount(ctx context.Context, acc account.Account) error {
+func (r *redisClint) CreateAccount(_ context.Context, acc account.Account) error {
 	accInDb := &accountModel{
 		ID:        acc.ID,
 		Debt:      acc.Debt,
@@ -44,10 +44,30 @@ func (r *redisClint) CreateAccount(ctx context.Context, acc account.Account) err
 		slog.Error(err.Error())
 		return account.ErrorInvalidAccountData
 	}
-	r.client.Set(strconv.Itoa(int(acc.ID)), data, 0)
+	r.client.Set(strconv.Itoa(int(acc.ID)), string(data), 0)
 	return nil
 }
 
-func (r *redisClint) GetAccount(context.Context, account.AccountID) (account.Account, error) {
-	return account.Account{}, nil
+func (r *redisClint) GetAccount(_ context.Context, accID account.AccountID) (account.Account, error) {
+	var acc account.Account
+	cmd := r.client.Get(strconv.Itoa(int(accID)))
+	if cmd.Err() != nil {
+		slog.Error(cmd.Err().Error())
+		return acc, account.ErrorAccountNotFound
+	}
+	data := cmd.Val()
+	var accInDb accountModel
+	err := json.Unmarshal([]byte(data), &accInDb)
+	if err != nil {
+		slog.Error(err.Error())
+		// TODO how to report downstream errors
+		return acc, err
+	}
+
+	acc.ID = accInDb.ID
+	acc.Debt = accInDb.Debt
+	acc.Lend = accInDb.Lend
+	acc.Balance = accInDb.Balance
+
+	return acc, nil
 }
