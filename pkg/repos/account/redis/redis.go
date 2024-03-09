@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"splitmoney/pkg/domain/account"
+	"splitmoney/pkg/domain/payment"
 	"strconv"
 	"time"
 
@@ -70,4 +71,39 @@ func (r *redisClint) GetAccount(_ context.Context, accID account.AccountID) (acc
 	acc.Balance = accInDb.Balance
 
 	return acc, nil
+}
+
+func (r *redisClint) CreateTx(_ context.Context, txn payment.Transaction) error {
+	tym := time.Now()
+	day := tym.Day()
+	month := int(tym.Month())
+	year := tym.Year()
+	hour := tym.Hour()
+	min := tym.Minute()
+	sec := tym.Second()
+
+	txnId := ((year * 1000000000) + (month * 100000000) + (day * 1000000) + (hour * 10000) + (min * 100) + sec)
+	paymentInDb := &paymentModel{
+		FromAccount:   txn.FromAccount,
+		ToAccount:     txn.ToAccount,
+		Ammount:       txn.Amount,
+		TransactionId: txnId,
+		CreatedAt:     tym,
+	}
+	data, error := json.Marshal(paymentInDb)
+
+	if error != nil {
+		slog.Error(error.Error())
+		return payment.ErrorTransactionFailed
+	}
+
+	r.client.Set(strconv.Itoa(txnId), string(data), 0)
+
+	return nil
+}
+
+func (r *redisClint) GetTxs(_ context.Context, accId account.AccountID) ([]payment.Transaction, error) {
+	var txns []payment.Transaction
+
+	return txns, nil
 }

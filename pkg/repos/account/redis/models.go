@@ -13,3 +13,11 @@ type accountModel struct {
 	CreatedAt time.Time         `json:"createdAt"`
 	UpdatedAt time.Time         `json:"updatedAt"`
 }
+
+type paymentModel struct {
+	FromAccount   account.AccountID `json:"fromAccount"`
+	ToAccount     account.AccountID `json:"toAccount"`
+	Ammount       int               `json:"ammount"`
+	TransactionId int               `json:"TrasnsactionId"`
+	CreatedAt     time.Time
+}
